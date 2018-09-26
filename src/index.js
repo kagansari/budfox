@@ -36,27 +36,25 @@ const argv = yargs.options({
   from: {
     describe: 'ISO string or timestamp of starting time',
     default: () => {
-      return moment().subtract(1, 'months').toISOString()
+      return moment().minute(0).millisecond(0).subtract(1, 'months').toISOString()
     }
   },
   to: {
     describe: 'ISO string or timestamp of starting time',
     default: () => {
-      return moment().toISOString()
+      return moment().minute(0).millisecond(0).toISOString()
     }
   }
 }).argv
 
-const init = async () => {
-  await Promise.all([broker.init(argv.exchange), db.init()])
-}
-
-const start = () => {
+const start = async () => {
   switch (argv.mode) {
     case 'ui':
+      await Promise.all([broker.init(argv.exchange), db.init()]) // init markets and db
       server.start()
       break
     case 'import': {
+      await Promise.all([broker.init(argv.exchange), db.init()]) // init markets and db
       const { exchange, symbol } = argv
       const from = moment(argv.from).valueOf()
       const to = moment(argv.to).valueOf()
@@ -64,9 +62,11 @@ const start = () => {
       break
     }
     case 'explore':
+      await Promise.all([broker.init(argv.exchange), db.init()]) // init markets and db
       db.exploreDatasets().then(end)
       break
     case 'backtest': {
+      await db.init() // init only db
       const { exchange, symbol } = argv
       const from = moment(argv.from).valueOf()
       const to = moment(argv.to).valueOf()
@@ -107,4 +107,4 @@ const startBacktest = (exchange, symbol, from, to) => {
   backtest.pipe(advisor).on('finish', end)
 }
 
-init().then(start)
+start()
