@@ -7,7 +7,7 @@ let db // mongodb instance
 let client // MongoClient instance
 
 const getCollectionName = (exchange, symbol) => {
-  const { base, quote } = util.broker.exchanges[exchange].markets[symbol]
+  const [base, quote] = symbol.split('/')
   return `${exchange}_${base}_${quote}`
 }
 

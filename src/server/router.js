@@ -9,8 +9,8 @@ router.get('/datasets', async (req, res) => {
 
 router.get('/datasets/:exchange/:base/:quote', async (req, res) => {
   const { exchange, base, quote } = req.params
-  const from = Number(from)
-  const to = Number(from)
+  const from = Number(req.params.from)
+  const to = Number(req.params.to)
 
   const symbol = `${base}/${quote}`
 
