@@ -1,5 +1,5 @@
 const broker = require('./broker')
 const db = require('./db')
+const Indicators = require('./Indicators')
 
-exports.broker = broker
-exports.db = db
+module.exports = { broker, db, Indicators }
