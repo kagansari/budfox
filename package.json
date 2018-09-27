@@ -2,7 +2,7 @@
   "name": "budfox",
   "version": "0.0.1",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest",
     "server:run": "node src/server",
     "client:serve": "vue-cli-service serve",
     "client:build": "vue-cli-service build",
@@ -26,12 +26,8 @@
     "@vue/cli-service": "^3.0.3",
     "babel-eslint": "^9.0.0",
     "eslint": "^5.6.0",
+    "jest": "^23.6.0",
     "vue-template-compiler": "^2.5.17"
-  },
-  "babel": {
-    "presets": [
-      "@vue/app"
-    ]
   },
   "postcss": {
     "plugins": {

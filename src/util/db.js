@@ -1,7 +1,6 @@
 const { MongoClient, Server } = require('mongodb')
 const moment = require('moment')
 const debug = require('debug')('bs:db')
-const util = require('./index')
 
 let db // mongodb instance
 let client // MongoClient instance
@@ -13,9 +12,6 @@ const getCollectionName = (exchange, symbol) => {
 
 const parseCollectionName = (collectionName) => {
   const [exchangeName, base, quote] = collectionName.split('_')
-  if (!util.broker.exchanges[exchangeName]) {
-    return false
-  }
   const symbol = `${base}/${quote}`
   if (!symbol) {
     return false
@@ -40,6 +36,11 @@ exports.init = async () => {
 
 exports.close = async () => {
   await client.close()
+}
+
+// remove all collections
+exports.reset = async () => {
+  await db.dropDatabase()
 }
 
 /**
@@ -123,7 +124,7 @@ exports.exploreDatasets = async () => {
     if (exchange && symbol) {
       const ranges = await findRanges(collection.collectionName)
       for (const range of ranges) {
-        datasets.push({ ...range, exchange, symbol })
+        datasets.push({ exchange, symbol, ...range })
       }
     }
   }
