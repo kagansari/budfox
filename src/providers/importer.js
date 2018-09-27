@@ -16,7 +16,8 @@ class Importer extends Readable {
     this.symbol = symbol
     this.from = from
     this.to = to
-    this.current = from
+    this.current = from // current timstamp while fetching data
+    this.maxLimit = 500 // maximum chunk size
   }
 
   /**
@@ -70,9 +71,8 @@ class Importer extends Readable {
       return this.push(null)
     }
     // if this is the last step
-    const leftCandleCount = Math.floor((this.to - this.current) / 60000)
-    const limit = Math.min(500, leftCandleCount)
-
+    const leftCandleCount = Math.floor((this.to - this.current) / 60000) + 1
+    const limit = Math.min(this.maxLimit, leftCandleCount)
     broker.getCandles(this.exchange, this.symbol, this.current, limit)
     .then(this.handleCandles.bind(this))
   }
