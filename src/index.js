@@ -5,10 +5,10 @@ const moment = require('moment')
 const debug = require('debug')
 
 const util = require('./util')
-const Importer = require('./providers/importer')
-const Backtest = require('./providers/backtest')
-const Saver = require('./executors/saver')
-const Advisor = require('./executors/advisor')
+const Importer = require('./providers/Importer')
+const Backtest = require('./providers/Backtest')
+const Saver = require('./executors/Saver')
+const Advisor = require('./executors/Advisor')
 const server = require('./server')
 
 // to show logs in vscode

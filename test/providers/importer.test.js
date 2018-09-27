@@ -1,5 +1,5 @@
 const { Writable } = require('stream')
-const Importer = require('../../src/providers/importer')
+const Importer = require('../../src/providers/Importer')
 const mockDatasets = require('../mock/datasets')
 
 jest.mock('../../src/util', () => ({
