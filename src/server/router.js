@@ -14,8 +14,8 @@ router.get('/datasets/:exchange/:base/:quote', async (req, res) => {
 
   const symbol = `${base}/${quote}`
 
-  const dataset = await util.db.getDataset(exchange, symbol, from, to)
-  res.send(dataset)
+  const candles = await util.db.getDataset(exchange, symbol, from, to)
+  res.send(candles.map(c => c.getRaw()))
 })
 
 module.exports = router

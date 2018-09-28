@@ -1,6 +1,6 @@
 require('dotenv').config()
 
-const { db } = require('../../src/util')
+const { db, Candle } = require('../../src/util')
 const mockDatasets = require('../mock/datasets')
 
 process.env.MONGO_DB = 'candles_test' // override database name
@@ -17,7 +17,7 @@ beforeEach(async () => {
 test('Saves candles to db and fetch later on', async () => {
   for (const mockDataset of mockDatasets) {
     const { exchange, symbol, data } = mockDataset
-    await db.saveCandles(exchange, symbol, data.map(d => d.data))
+    await db.saveCandles(exchange, symbol, data.map(d => new Candle(d)))
   }
   const datasetBTC1 = mockDatasets[0]
   const datasetBTC2 = mockDatasets[1]
@@ -34,7 +34,7 @@ test('Explores datasets', async () => {
   const expectedDatasets = [];
   for (const mockDataset of mockDatasets) {
     const { exchange, symbol, data, from, to } = mockDataset
-    await db.saveCandles(exchange, symbol, data.map(d => d.data))
+    await db.saveCandles(exchange, symbol, data.map(d => new Candle(d)))
     expectedDatasets.push({ exchange, symbol, from, to })
   }
   const datasets = await db.exploreDatasets()

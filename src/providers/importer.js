@@ -29,7 +29,7 @@ class Importer extends Readable {
   }
 
   /**
-   * @param {[Array]} candles [[timestamp, O, H, L, C, V]]
+   * @param {[Candle]} candles [[timestamp, O, H, L, C, V]]
    */
   handleCandles(candles) {
     if (candles.length === 0) {
@@ -37,8 +37,8 @@ class Importer extends Readable {
       return this.push(null)
     }
     // ends of fetched data (timestamps)
-    const start = candles[0][0]
-    const end = candles[candles.length - 1][0]
+    const start = candles[0].ts
+    const end = candles[candles.length - 1].ts
 
     // check if timestamps of fetched data are correct
     const expectedCount = ((end - start) / 60000) + 1

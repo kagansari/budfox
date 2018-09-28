@@ -1,6 +1,7 @@
 const { MongoClient, Server } = require('mongodb')
 const moment = require('moment')
 const debug = require('debug')('bs:db')
+const Candle = require('./Candle')
 
 let db // mongodb instance
 let client // MongoClient instance
@@ -46,14 +47,11 @@ exports.reset = async () => {
 /**
  * @param {String} exchange
  * @param {String} symbol
- * @param {[[TS,O,H,L,C,V]]} candles
+ * @param {[Candle]} candles
  */
 exports.saveCandles = async (exchange, symbol, candles) => {
   const collectionName = getCollectionName(exchange, symbol)
-  const documents = candles.map(candle => ({
-    _id: candle[0],
-    data: candle
-  }))
+  const documents = candles.map(candle => candle.getDocument())
 
   await db.collection(collectionName).insertMany(documents, {
     ordered: false
@@ -136,7 +134,7 @@ exports.exploreDatasets = async () => {
  * @param {String} symbol
  * @param {Number} from
  * @param {Number} to
- * @return {[TS,O,H,L,C,V]]} candles
+ * @return {[Candle]} candles
  */
 exports.getDataset = async (exchange, symbol, from, to) => {
   const coll = db.collection(getCollectionName(exchange, symbol))
@@ -148,15 +146,15 @@ exports.getDataset = async (exchange, symbol, from, to) => {
   if (!to) to = (await coll.find({}).sort('_id', -1).next())._id // latest candle timestamp
 
   const query = { _id: { $gte: from, $lte: to } }
-  const candles = await coll.find(query).sort('_id', 1).toArray()
+  const candleDocs = await coll.find(query).sort('_id', 1).toArray()
 
-  const count = candles.length
+  const count = candleDocs.length
   const expectedCount = ((to - from) / 60000) + 1
   if (count != expectedCount) {
     throw new Error(`Expected ${expectedCount} candles but only ${count} found`)
   }
 
-  return candles.map(c => c.data)
+  return candleDocs.map(c => new Candle(c))
 }
 
 exports.getCandleCursor = async (exchange, symbol, from, to) => {

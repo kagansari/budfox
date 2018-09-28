@@ -1,4 +1,5 @@
 const ccxt = require('ccxt')
+const Candle = require('./Candle')
 
 const exchanges = {} // ccxt instances
 
@@ -18,7 +19,8 @@ exports.getCandles = async (exchangeName, symbol, since, limit=500) => {
       enableRateLimit: true
     })
   }
-  return await exchanges[exchangeName].fetchOHLCV(symbol, '1m', since, limit)
+  const rawCandles = await exchanges[exchangeName].fetchOHLCV(symbol, '1m', since, limit)
+  return rawCandles.map(c => new Candle(c))
 }
 
 exports.exchanges = exchanges
