@@ -137,22 +137,27 @@ exports.fillDataset = async (dataset) => {
   return dataset.setCandles(candles)
 }
 
-// exports.getCandleCursor = async (exchange, symbol, from, to) => {
-//   const collName = getCollectionName(exchange, symbol)
-//   const coll = db.collection(collName)
-//   if (!coll) {
-//     throw new Error(`Collection ${collName} not found`)
-//   }
+/**
+ * @param {Dataset} dataset
+ * @return {Object} { next: Promise }
+ */
+exports.getItarator = (dataset) => {
+  const coll = db.collection(dataset.collectionName)
+  if (!coll) {
+    throw new Error(`Collection ${dataset.collectionName} not found`)
+  }
 
-//   const cursor = coll
-//   .find({ _id: { $gte: from, $lte: to }})
-//   .sort('_id', 1)
+  const cursor = coll
+    .find({ _id: { $gte: dataset.from, $lte: dataset.to }})
+    .sort('_id', 1)
 
-//   const count = await cursor.count()
-//   const expectedCount = ((to - from) / 60000) + 1
-//   if (count !== expectedCount) {
-//     throw new Error(`Expected ${expectedCount} candles but only ${count} found`)
-//   }
-
-//   return cursor
-// }
+  return {
+    next: async () => {
+      if (await cursor.hasNext()) {
+        const raw = await cursor.next()
+        return new Candle(raw)
+      }
+      throw 'Data over'
+    }
+  }
+}

@@ -16,9 +16,9 @@ class Indicators {
     for (const period of this.config.ema.periods) {
       const multiplier = 2 / (period + 1)
       if (!this.ema[period]) {
-        this.ema[period] = candle.data[4]
+        this.ema[period] = candle.o
       }
-      this.ema[period] = (candle.data[4] - this.ema[period]) * multiplier + this.ema[period]
+      this.ema[period] = (candle.o - this.ema[period]) * multiplier + this.ema[period]
     }
   }
 

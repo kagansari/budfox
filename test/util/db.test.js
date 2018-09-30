@@ -108,6 +108,27 @@ test('Explores datasets', async () => {
   }
 })
 
+test('Iterates over data', async () => {
+  // 15 candles
+  const exchange = 'binance'
+  const symbol = 'BTC/USDT'
+  const raw = [
+    [1533463200000.0, 7067.59, 7070, 7060.52, 7066.2, 31.954776],
+    [1533463260000.0, 7066.2, 7077.74, 7066.2, 7077.74, 44.956988],
+    [1533463320000.0, 7072.36, 7082.54, 7072.36, 7078.06, 49.029872],
+    [1533463380000.0, 7078.07, 7078.43, 7075.41, 7078, 42.231384],
+    [1533463440000.0, 7076.01, 7080.01, 7076.01, 7080.01, 93.10206],
+    [1533463500000.0, 7078.94, 7089.87, 7078.94, 7083.73, 22.520387]
+  ]
+  const dataset = new Dataset({ exchange, symbol, raw })
+  await db.saveDataset(dataset)
+  const iterator = db.getItarator(dataset)
+  let candle = (await iterator.next()).getRaw()
+  expect(candle).toEqual(raw[0])
+  candle = (await iterator.next()).getRaw()
+  expect(candle).toEqual(raw[1])
+})
+
 afterAll(async () => {
   await db.close()
 })
