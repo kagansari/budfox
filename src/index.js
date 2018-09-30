@@ -14,7 +14,7 @@ const server = require('./server')
 // to show logs in vscode
 debug.log = console.log.bind(console) // eslint-disable-line no-console
 
-const { broker, db } = util
+const { broker, db, Dataset } = util
 
 const argv = yargs.options({
   mode: {
@@ -58,7 +58,7 @@ const start = async () => {
       const { exchange, symbol } = argv
       const from = moment(argv.from).valueOf()
       const to = moment(argv.to).valueOf()
-      startImporter(exchange, symbol, from, to)
+      startImporter(new Dataset({ exchange, symbol, from, to }))
       break
     }
     case 'explore':
@@ -70,7 +70,7 @@ const start = async () => {
       const { exchange, symbol } = argv
       const from = moment(argv.from).valueOf()
       const to = moment(argv.to).valueOf()
-      startBacktest(exchange, symbol, from, to)
+      startBacktest(new Dataset({ exchange, symbol, from, to }))
       break
     }
     default:
@@ -83,27 +83,21 @@ const end = () => {
 }
 
 /**
- * @param {String} exchange
- * @param {String} symbol
- * @param {Number} from
- * @param {Number} to
+ * @param {Dataset} dataset
  */
-const startImporter = async (exchange, symbol, from, to) => {
-  const importer = new Importer(exchange, symbol, from, to)
+const startImporter = async (dataset) => {
+  const importer = new Importer(dataset)
   const saver = new Saver()
   await importer.pipe(saver).on('finish', end)
 }
 
 
 /**
- * @param {String} exchange
- * @param {String} symbol
- * @param {Number} from
- * @param {Number} to
+ * @param {Dataset} dataset
  */
-const startBacktest = (exchange, symbol, from, to) => {
+const startBacktest = (dataset) => {
+  const backtest = new Backtest(dataset)
   const advisor = new Advisor()
-  const backtest = new Backtest(exchange, symbol, from, to)
   backtest.pipe(advisor).on('finish', end)
 }
 

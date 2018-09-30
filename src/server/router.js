@@ -1,21 +1,22 @@
 const express = require('express')
 const router = express.Router()
-const util = require('../util')
+const { db, Dataset } = require('../util')
 
 router.get('/datasets', async (req, res) => {
-  const datasets = await util.db.exploreDatasets()
-  res.send(datasets)
+  const datasets = await db.exploreDatasets()
+  res.send(datasets.map(d => d.toJSON()))
 })
 
-router.get('/datasets/:exchange/:base/:quote', async (req, res) => {
+router.get('/datasets/:exchange/:base/:quote/:from/:to', async (req, res) => {
   const { exchange, base, quote } = req.params
   const from = Number(req.params.from)
   const to = Number(req.params.to)
 
   const symbol = `${base}/${quote}`
 
-  const candles = await util.db.getDataset(exchange, symbol, from, to)
-  res.send(candles.map(c => c.getRaw()))
+  const dataset = new Dataset({ exchange, symbol, from, to })
+  await db.fillDataset(dataset)
+  res.send(dataset.candles.map(c => c.getRaw()))
 })
 
 module.exports = router

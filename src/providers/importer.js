@@ -1,22 +1,15 @@
 const { Readable } = require('stream')
-const moment = require('moment')
 const debug = require('debug')('bs:import')
-const { broker } = require('../util')
+const { broker, Dataset } = require('../util')
 
 class Importer extends Readable {
   /**
-   * @param {String} exchange binance
-   * @param {String} symbol BTC/USDT
-   * @param {Number} from unix timestamp
-   * @param {Number} to unix timestamp
+   * @param {Dataset} dataset
    */
-  constructor(exchange, symbol, from, to) {
+  constructor(dataset) {
     super({ objectMode: true })
-    this.exchange = exchange
-    this.symbol = symbol
-    this.from = from
-    this.to = to
-    this.current = from // current timstamp while fetching data
+    this.dataset = dataset
+    this.lastTS = dataset.from - 60000 // timestamp of the latest candle pushed
     this.maxLimit = 500 // maximum chunk size
   }
 
@@ -24,57 +17,40 @@ class Importer extends Readable {
    * @return {Number} completed percentage
    */
   getProgress() {
-    const progress = (this.current - this.from) / (this.to - this.from)
+    const progress = (this.lastTS - this.dataset.from) / (this.dataset.to - this.dataset.from)
     return Math.ceil(progress * 100)
   }
 
   /**
-   * @param {[Candle]} candles [[timestamp, O, H, L, C, V]]
+   * @param {Dataset} dataset
    */
-  handleCandles(candles) {
-    if (candles.length === 0) {
+  handleDataset(dataset) {
+    if (dataset.length === 0) {
       debug('No candle returned, aborting')
       return this.push(null)
     }
-    // ends of fetched data (timestamps)
-    const start = candles[0].ts
-    const end = candles[candles.length - 1].ts
 
-    // check if timestamps of fetched data are correct
-    const expectedCount = ((end - start) / 60000) + 1
-    if (expectedCount !== candles.length) {
-      const err = new Error(`Looks like data has missing points, has ${candles.length} but looks ${expectedCount}`)
-      // this.emit('error', err) // @todo handle error
-      console.error(err) // eslint-disable-line no-console
-      this.push(null)
-      return
-    }
-
-    // if incoming data starts after from the start parameter
-    if (start > this.current + 60000) {
-      this.from = start
-      debug(`No available data, starting from ${moment(start).toISOString()}`)
-    }
-
-    this.current = end + 60000 // start from the next minute
-    debug(`Fetched ${candles.length} candles from ${moment(start).toISOString()} to ${moment(end).toISOString()}, ${this.getProgress()}% completed`);
-    this.push({
-      exchange: this.exchange,
-      symbol: this.symbol,
-      candles
-    })
+    debug(`Fetched data: ${dataset}, ${this.getProgress()}% completed`);
+    this.lastTS = dataset.to // start from the next minute
+    this.push(dataset)
   }
 
   _read() {
-    if (this.current >= this.to) {
+    if (this.lastTS >= this.dataset.to) {
       debug('Importing done')
       return this.push(null)
     }
-    // if this is the last step
-    const leftCandleCount = Math.floor((this.to - this.current) / 60000) + 1
-    const limit = Math.min(this.maxLimit, leftCandleCount)
-    broker.getCandles(this.exchange, this.symbol, this.current, limit)
-    .then(this.handleCandles.bind(this))
+
+    const nextDataset = new Dataset({
+      exchange: this.dataset.exchange,
+      symbol: this.dataset.symbol,
+      from: this.lastTS + 60000 || this.dataset.from,
+      to: Math.min(this.lastTS + this.maxLimit * 60000, this.dataset.to)
+    })
+
+    broker
+      .fillDataset(nextDataset)
+      .then(this.handleDataset.bind(this))
   }
 }
 

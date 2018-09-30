@@ -1,11 +1,11 @@
 const { Writable } = require('stream')
 const Importer = require('../../src/providers/Importer')
-const { Candle } = require('../../src/util')
+const { Candle, Dataset } = require('../../src/util')
 const broker = require('../../src/util/broker')
 
 jest.mock('../../src/util/broker')
 
-broker.getCandles.mockImplementation((exchange, symbol, since, limit) => {
+broker.fillDataset.mockImplementation(async (dataset) => {
   // 15 candles
   const rawData = [
     [1533463200000.0, 7067.59, 7070, 7060.52, 7066.2, 31.954776],
@@ -27,9 +27,10 @@ broker.getCandles.mockImplementation((exchange, symbol, since, limit) => {
   ]
 
   const candles = rawData.map(d => new Candle(d))
-  const startIndex = candles.findIndex(c => c.ts == since)
+  const startIndex = candles.findIndex(c => c.ts == dataset.from)
+  const slicedCandles = candles.slice(startIndex, startIndex + dataset.length)
 
-  return Promise.resolve(candles.slice(startIndex, startIndex + limit))
+  return dataset.setCandles(slicedCandles)
 })
 
 const mockWriter = new Writable({
@@ -38,7 +39,13 @@ const mockWriter = new Writable({
 })
 
 test('Streams candle data', (done) => {
-  const importer = new Importer('binance', 'BTC/USDT', 1533463200000, 1533464040000)
+  const dataset = new Dataset({
+    exchange: 'binance',
+    symbol: 'BTC/USDT',
+    from: 1533463200000,
+    to: 1533464040000
+  })
+  const importer = new Importer(dataset)
   importer.maxLimit = 10
 
   const onData = jest.fn()

@@ -2,22 +2,19 @@ const { MongoClient, Server } = require('mongodb')
 const moment = require('moment')
 const debug = require('debug')('bs:db')
 const Candle = require('./Candle')
+const Dataset = require('./Dataset')
 
 let db // mongodb instance
 let client // MongoClient instance
 
-const getCollectionName = (exchange, symbol) => {
-  const [base, quote] = symbol.split('/')
-  return `${exchange}_${base}_${quote}`
-}
-
 const parseCollectionName = (collectionName) => {
-  const [exchangeName, base, quote] = collectionName.split('_')
-  const symbol = `${base}/${quote}`
-  if (!symbol) {
+  const [type, exchange, base, quote] = collectionName.split('_')
+  if (type !== 'candles') {
     return false
   }
-  return { exchange: exchangeName, symbol }
+
+  const symbol = `${base}/${quote}`
+  return { exchange, symbol }
 }
 
 // try to connect to the db once in a sec
@@ -45,15 +42,12 @@ exports.reset = async () => {
 }
 
 /**
- * @param {String} exchange
- * @param {String} symbol
- * @param {[Candle]} candles
+ * @param {Dataset} dataset
  */
-exports.saveCandles = async (exchange, symbol, candles) => {
-  const collectionName = getCollectionName(exchange, symbol)
-  const documents = candles.map(candle => candle.getDocument())
+exports.saveDataset = async (dataset) => {
+  const documents = dataset.candles.map(candle => candle.getDocument())
 
-  await db.collection(collectionName).insertMany(documents, {
+  await db.collection(dataset.collectionName).insertMany(documents, {
     ordered: false
   }).catch(err => {
     debug(`${err.writeErrors.length} duplicate items found, ignoring`)
@@ -112,7 +106,7 @@ const findRanges = async (collectionName) => {
 
 /**
  * scan all database and find candle collections, return ranges
- * @return {[Object]} [{ exchange: 'binance', symbol: 'BTC/USDT', ranges: [{from, to}] }]
+ * @return {[Dataset]}
  */
 exports.exploreDatasets = async () => {
   const collections = await db.collections()
@@ -122,7 +116,7 @@ exports.exploreDatasets = async () => {
     if (exchange && symbol) {
       const ranges = await findRanges(collection.collectionName)
       for (const range of ranges) {
-        datasets.push({ exchange, symbol, ...range })
+        datasets.push(new Dataset({ exchange, symbol, ...range }))
       }
     }
   }
@@ -130,49 +124,35 @@ exports.exploreDatasets = async () => {
 }
 
 /**
- * @param {String} exchange
- * @param {String} symbol
- * @param {Number} from
- * @param {Number} to
- * @return {[Candle]} candles
+ * @param {Dataset} dataset
+ * @return {Dataset} loaded dataset
  */
-exports.getDataset = async (exchange, symbol, from, to) => {
-  const coll = db.collection(getCollectionName(exchange, symbol))
-  if (!coll) {
-    throw new Error(`No data available for exchange:${exchange}, symbol: ${symbol}`)
-  }
+exports.fillDataset = async (dataset) => {
+  const coll = db.collection(dataset.collectionName)
 
-  if (!from) from = (await coll.find({}).sort('_id', 1).next())._id // earliest candle timestamp
-  if (!to) to = (await coll.find({}).sort('_id', -1).next())._id // latest candle timestamp
-
-  const query = { _id: { $gte: from, $lte: to } }
+  const query = { _id: { $gte: dataset.from, $lte: dataset.to } }
   const candleDocs = await coll.find(query).sort('_id', 1).toArray()
+  const candles = candleDocs.map(c => new Candle(c))
 
-  const count = candleDocs.length
-  const expectedCount = ((to - from) / 60000) + 1
-  if (count != expectedCount) {
-    throw new Error(`Expected ${expectedCount} candles but only ${count} found`)
-  }
-
-  return candleDocs.map(c => new Candle(c))
+  return dataset.setCandles(candles)
 }
 
-exports.getCandleCursor = async (exchange, symbol, from, to) => {
-  const collName = getCollectionName(exchange, symbol)
-  const coll = db.collection(collName)
-  if (!coll) {
-    throw new Error(`Collection ${collName} not found`)
-  }
+// exports.getCandleCursor = async (exchange, symbol, from, to) => {
+//   const collName = getCollectionName(exchange, symbol)
+//   const coll = db.collection(collName)
+//   if (!coll) {
+//     throw new Error(`Collection ${collName} not found`)
+//   }
 
-  const cursor = coll
-  .find({ _id: { $gte: from, $lte: to }})
-  .sort('_id', 1)
+//   const cursor = coll
+//   .find({ _id: { $gte: from, $lte: to }})
+//   .sort('_id', 1)
 
-  const count = await cursor.count()
-  const expectedCount = ((to - from) / 60000) + 1
-  if (count !== expectedCount) {
-    throw new Error(`Expected ${expectedCount} candles but only ${count} found`)
-  }
+//   const count = await cursor.count()
+//   const expectedCount = ((to - from) / 60000) + 1
+//   if (count !== expectedCount) {
+//     throw new Error(`Expected ${expectedCount} candles but only ${count} found`)
+//   }
 
-  return cursor
-}
+//   return cursor
+// }

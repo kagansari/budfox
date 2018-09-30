@@ -40,7 +40,7 @@ export default {
     const { exchange, base, quote } = this.$route.params
     const from = moment(this.$route.params.from).valueOf()
     const to = moment(this.$route.params.to).valueOf()
-    api.get(`datasets/${exchange}/${base}/${quote}?from=${from}&to=${to}`)
+    api.get(`datasets/${exchange}/${base}/${quote}/${from}/${to}`)
     .then(dataset => {
       this.initChart(dataset)
     })

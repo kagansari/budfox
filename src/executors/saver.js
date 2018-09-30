@@ -7,12 +7,10 @@ class Saver extends Writable {
   }
 
   /**
-   * @param {Object} data { exchange: String, symbol: String, candles: [TS,O,H,L,C,V]}
+   * @param {Dataset} data
    */
-  _write(data, encoding, next) {
-    const { exchange, symbol, candles } = data
-    db.saveCandles(exchange, symbol, candles)
-    .then(next);
+  _write(dataset, encoding, next) {
+    db.saveDataset(dataset).then(next);
   }
 }
 

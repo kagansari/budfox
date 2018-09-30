@@ -13,14 +13,15 @@ exports.init = async (exchangeName) => {
   console.log(`Markets loaded: ${exchangeName}`) // eslint-disable-line no-console
 }
 
-exports.getCandles = async (exchangeName, symbol, since, limit=500) => {
-  if (!exchanges[exchangeName]) {
-    exchanges[exchangeName] = new ccxt[exchangeName]({
-      enableRateLimit: true
-    })
-  }
-  const rawCandles = await exchanges[exchangeName].fetchOHLCV(symbol, '1m', since, limit)
-  return rawCandles.map(c => new Candle(c))
+/**
+ * fills given dataset from ccxt and returns it
+ * @param {Dataset} dataset
+ * @return {Dataset}
+ */
+exports.fillDataset = async (dataset) => {
+  const rawCandles = await exchanges[dataset.exchange].fetchOHLCV(dataset.symbol, '1m', dataset.from, dataset.length)
+  const candles = rawCandles.map(r => new Candle(r))
+  return dataset.setCandles(candles)
 }
 
 exports.exchanges = exchanges
