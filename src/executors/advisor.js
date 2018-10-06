@@ -7,9 +7,17 @@ class Advisor extends Writable {
     this.indicators = new Indicators()
   }
 
-  _write(data, encoding, next) {
-    this.indicators.update(data)
+  /**
+   * @param {Candle} candle
+   */
+  _write(candle, encoding, next) {
+    this.indicators.update(candle)
     next()
+  }
+
+  _final(cb) {
+    console.log(this.indicators);
+    // cb()
   }
 }
 
